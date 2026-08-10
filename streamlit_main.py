@@ -1,45 +1,58 @@
+import os
 import streamlit as st
-import random
-import time
+from openai import OpenAI
 
-st.write("Streamlit loves LLMs! [Build your own chat app](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps) in minutes, then make it powerful by adding images, dataframes, or even input widgets to the chat.")
+# OpenRouter free model tag
+MODEL = "openrouter/free"
 
-st.caption("Note that this demo app isn't actually connected to any LLMs. Those are expensive ;)")
+st.title("My Personal ChatBot")
+st.caption(f"Connected to OpenRouter: {MODEL}")
 
-# Initialize chat history
+# Retrieve API key from Streamlit secrets or environment
+api_key = st.secrets.get("OPENROUTER_API_KEY", os.getenv("OPENROUTER_API_KEY"))
+
+if not api_key:
+    st.error("Please add OPENROUTER_API_KEY to Streamlit Secrets.")
+    st.stop()
+
+# Point OpenAI client to OpenRouter's endpoint
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=api_key,
+)
+
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "Let's start chatting! 👇"}]
+    st.session_state.messages = []
 
-# Display chat messages from history on app rerun
+# Display message history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Accept user input
-if prompt := st.chat_input("What is up?"):
-    # Add user message to chat history
+# Handle prompt input
+if prompt := st.chat_input("Ask me anything..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    # Display user message in chat message container
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Display assistant response in chat message container
     with st.chat_message("assistant"):
-        message_placeholder = st.empty()
+        response_placeholder = st.empty()
         full_response = ""
-        assistant_response = random.choice(
-            [
-                "Hello there! How can I assist you today?",
-                "Hi, human! Is there anything I can help you with?",
-                "Do you need help?",
-            ]
-        )
-        # Simulate stream of response with milliseconds delay
-        for chunk in assistant_response.split():
-            full_response += chunk + " "
-            time.sleep(0.05)
-            # Add a blinking cursor to simulate typing
-            message_placeholder.markdown(full_response + "▌")
-        message_placeholder.markdown(full_response)
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+        try:
+            stream = client.chat.completions.create(
+                model=MODEL,
+                messages=st.session_state.messages,
+                stream=True,
+            )
+
+            for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    full_response += chunk.choices[0].delta.content
+                    response_placeholder.markdown(full_response + "▌")
+
+            response_placeholder.markdown(full_response)
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+        except Exception as e:
+            st.error(f"OpenRouter Error: {e}")
