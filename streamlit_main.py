@@ -2,10 +2,15 @@ import os
 import streamlit as st
 from openai import OpenAI
 
+st.set_page_config(
+    page_title="chatGBT",
+    page_icon="😈",  # Optional: sets a custom emoji favicon
+)
+
 # OpenRouter free model tag
 MODEL = "openrouter/free"
 
-st.title("My Personal ChatBot")
+st.title("ChatBot")
 st.caption(f"Connected to OpenRouter: {MODEL}")
 
 # Retrieve API key from Streamlit secrets or environment
@@ -21,13 +26,24 @@ client = OpenAI(
     api_key=api_key,
 )
 
+# System prompt instructs the AI to use Streamlit-compatible LaTeX ($...$)
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a helpful assistant. Always format LaTeX math equations using single dollar signs "
+                "for inline math (e.g., $x^2$) and double dollar signs for block equations (e.g., $$x^2$$). "
+                "Never use parentheses \\(...\\) or brackets \\[\\] for LaTeX."
+            ),
+        }
+    ]
 
-# Display message history
+# Display message history (skipping the hidden system instruction)
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    if message["role"] != "system":
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
 # Handle prompt input
 if prompt := st.chat_input("Ask me anything..."):
