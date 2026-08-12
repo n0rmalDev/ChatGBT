@@ -1,11 +1,25 @@
 import os
 import streamlit as st
 from openai import OpenAI
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="chatGBT",
     page_icon="😈",  # Optional: sets a custom emoji favicon
 )
+
+# Override browser tab title
+components.html(
+    """
+    <script>
+        window.parent.document.title = "chatGBT";
+    </script>
+    """,
+    height=0,
+    width=0,
+)
+
+
 
 # OpenRouter free model tag
 MODEL = "openrouter/free"
