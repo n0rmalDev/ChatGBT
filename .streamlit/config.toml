@@ -1,0 +1,20 @@
+# .streamlit/config.toml
+
+[theme]
+# Base theme ('light' or 'dark')
+base = "dark"
+
+# Primary accent color for buttons, sliders, links, etc.
+primaryColor = "#7C3AED"
+
+# Background color for the main content area
+backgroundColor = "#0F172A"
+
+# Background color for the sidebar and card elements
+secondaryBackgroundColor = "#1E293B"
+
+# Main text color
+textColor = "#F8FAFC"
+
+# Font style ('sans serif', 'serif', or 'monospace')
+font = "sans serif"

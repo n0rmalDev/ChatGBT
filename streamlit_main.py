@@ -92,7 +92,7 @@ if "messages" not in st.session_state:
             "role": "system",
             "content": (
                 "You are a helpful assistant. Always format LaTeX math equations using single dollar signs "
-                "for inline math (e.g., $x^2$) and double d ollar signs for block equations (e.g., $$x^2$$). "
+                "for inline math (e.g., $x^2$) and  double d ollar signs for block equations (e.g., $$x^2$$). "
                 "Never use parentheses \\(...\\) or brackets \\[\\] for LaTeX."
             ),
         }
@@ -147,3 +147,8 @@ if prompt := st.chat_input("Ask me anything..."):
 
         except Exception as e:
             st.error(f"OpenRouter Error: {e}")
+
+st.markdown(
+    #Custom CSS
+    
+)
