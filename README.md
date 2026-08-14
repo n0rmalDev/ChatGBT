@@ -31,7 +31,7 @@
 ---
 
 # USAGE
-## HOW to RUN LOCALLY
+## How to run locally
 
 Make sure to have `git` installed. Mac (via Hombrew) ```brew install git```
 
