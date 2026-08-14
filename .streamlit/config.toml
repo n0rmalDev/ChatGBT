@@ -1,20 +1,18 @@
-# .streamlit/config.toml
-
 [theme]
-# Base theme ('light' or 'dark')
+# Base theme setting
 base = "dark"
 
-# Primary accent color for buttons, sliders, links, etc.
-primaryColor = "#7C3AED"
+# Accent purple for buttons, focus borders, sliders, etc.
+primaryColor = "#8B5CF6"
 
-# Background color for the main content area
-backgroundColor = "#0F172A"
+# Main chat background (Pitch Black)
+backgroundColor = "#000000"
 
-# Background color for the sidebar and card elements
-secondaryBackgroundColor = "#1E293B"
+# Sidebar & input box background (Dark Charcoal)
+secondaryBackgroundColor = "#121212"
 
-# Main text color
-textColor = "#F8FAFC"
+# Main text color (Off-White)
+textColor = "#FFFFFF"
 
-# Font style ('sans serif', 'serif', or 'monospace')
+# Font style
 font = "sans serif"
