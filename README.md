@@ -30,12 +30,16 @@
 
 ---
 
-## 📁 Repository Structure
+## USAGE
+# HOW to RUN LOCALLY
 
-```text
-├── .streamlit/
-│   └── config.toml          # Custom theme configuration (Dark mode & Purple accents)
-├── streamlit_main.py        # Core application entry point
-├── requirements.txt         # Dependencies list for local & cloud deployment
-├── README.md                # Project documentation
-└── .gitignore               # Ignores local secrets and python build caches
+Make sure to have `git` installed. Mac (via Hombrew) ```brew install git```
+
+1. Clone the repository: ```git clone https://github.com/n0rmalDev/ChatGBT.git``` ```cd chatGBT```
+2. Create a virtual environment (Recommended) ```python3 -m vent env``` ```source venv/bin/activate```
+3. Install required packages ```pip install -r requirements.txt```
+4. Set up your own API key ```mdkir -p .streamlit``` Create a `secrets.toml` file inside the `.streamlit` folder. Paste your API key with the variable into the `secrets.toml` file.
+
+
+📄 License
+Distributed under the MIT License. See LICENSE for more information.
