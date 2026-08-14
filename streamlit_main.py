@@ -60,7 +60,7 @@ with st.sidebar:
 # ------------------------------------------------------------------------------
 MODEL = "openrouter/free"
 
-st.title("ChatBot")
+st.title("ChatGBT")
 st.caption(f"Connected to OpenRouter: {MODEL}")
 
 api_key = st.secrets.get("OPENROUTER_API_KEY", os.getenv("OPENROUTER_API_KEY"))
