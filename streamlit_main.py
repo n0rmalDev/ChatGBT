@@ -5,14 +5,15 @@ import chromadb
 from pypdf import PdfReader
 from openai import OpenAI
 
-# 1. Page Configuration
+# ------------------------------------------------------------------------------
+# 1. Page Configuration & Tab Title Override
+# ------------------------------------------------------------------------------
 st.set_page_config(
     page_title="chatGBT",
     page_icon="😈",
-    initial_sidebar_state="expanded"  # Forces the sidebar to open on load
+    initial_sidebar_state="expanded"
 )
 
-# Tab title override
 components.html(
     """
     <script>
@@ -23,55 +24,40 @@ components.html(
     width=0,
 )
 
-# 2. Sidebar Setup (This creates the sidebar!)
+# ------------------------------------------------------------------------------
+# 2. Custom CSS: Pitch Black Theme, Purple Accents & Hidden Top Toolbar
+# ------------------------------------------------------------------------------
+st.markdown(
+    """
+    <style>
+    header[data-testid="stHeader"] {
+        visibility: hidden;
+        height: 0%;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ------------------------------------------------------------------------------
+# 3. Sidebar Knowledge Base Status
+# ------------------------------------------------------------------------------
 with st.sidebar:
     st.header("📄 Knowledge Base")
-    # 1. Update type to accept both pdf and txt extensions
-    uploaded_file = st.file_uploader("Upload a PDF or TXT file", type=["pdf", "txt"])
+    st.caption("Attach a `.pdf` or `.txt` file directly in the chat box below!")
 
-    if uploaded_file and st.button("Process & Index File"):
-        with st.spinner("Processing file..."):
-            text = ""
+    if "pdf_filename" in st.session_state:
+        st.success(f"Active Document: **{st.session_state.pdf_filename}**")
+        if st.button("Clear Document Context"):
+            del st.session_state.collection
+            del st.session_state.pdf_filename
+            st.rerun()
+    else:
+        st.info("No active document loaded.")
 
-            # 2. Extract text according to file extension
-            if uploaded_file.name.endswith(".pdf"):
-                reader = PdfReader(uploaded_file)
-                for page in reader.pages:
-                    extracted = page.extract_text()
-                    if extracted:
-                        text += extracted + "\n"
-
-            elif uploaded_file.name.endswith(".txt"):
-                # Read raw bytes and decode utf-8 plain text
-                text = uploaded_file.read().decode("utf-8")
-
-            # 3. Sliding window chunking (remains identical)
-            chunk_size = 300
-            overlap = 100
-            step = chunk_size - overlap
-            chunks = [
-                text[i: i + chunk_size]
-                for i in range(0, len(text), step)
-                if text[i: i + chunk_size].strip()
-            ]
-
-            # 4. Store in ChromaDB
-            chroma_client = chromadb.Client()
-            try:
-                chroma_client.delete_collection("chat_docs")
-            except Exception:
-                pass
-
-            collection = chroma_client.create_collection("chat_docs")
-            tags = [f"{uploaded_file.name}_{i}" for i in range(len(chunks))]
-            collection.add(documents=chunks, ids=tags)
-
-            st.session_state.collection = collection
-            st.session_state.pdf_filename = uploaded_file.name
-            st.success(f"Indexed {len(chunks)} chunks from {uploaded_file.name}!")
-
-
-# 3. Main Chat App
+# ------------------------------------------------------------------------------
+# 4. Main Chat App & API Setup
+# ------------------------------------------------------------------------------
 MODEL = "openrouter/free"
 
 st.title("ChatBot")
@@ -106,46 +92,97 @@ for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-# 4. Handle Chat Input
-if prompt := st.chat_input("Ask me anything..."):
-    with st.chat_message("user"):
-        st.markdown(prompt)
+# ------------------------------------------------------------------------------
+# 5. Handle Chat Input & Automatic File Attachment Processing
+# ------------------------------------------------------------------------------
+if prompt_data := st.chat_input("Ask a question or attach a file...", accept_file=True, file_type=["pdf", "txt"]):
+    
+    # Extract text and attached files
+    if isinstance(prompt_data, str):
+        user_text = prompt_data
+        uploaded_files = []
+    else:
+        user_text = getattr(prompt_data, "text", "") or prompt_data.get("text", "")
+        uploaded_files = getattr(prompt_data, "files", []) or prompt_data.get("files", [])
 
-    user_content = prompt
-    if "collection" in st.session_state:
-        results = st.session_state.collection.query(query_texts=[prompt], n_results=5)
-        retrieved_docs = results["documents"][0] if results.get("documents") else []
-        if retrieved_docs:
-            context_str = "\n---\n".join(retrieved_docs)
-            user_content = (
-                f"Use the following document context to answer the question.\n\n"
-                f"DOCUMENT CONTEXT:\n{context_str}\n\n"
-                f"USER QUESTION: {prompt}"
-            )
+    # Process attached PDF / TXT file automatically if present
+    if uploaded_files:
+        for file in uploaded_files:
+            with st.status(f"Reading & indexing {file.name}...", expanded=False) as status:
+                text = ""
+                if file.name.endswith(".pdf"):
+                    reader = PdfReader(file)
+                    for page in reader.pages:
+                        extracted = page.extract_text()
+                        if extracted:
+                            text += extracted + "\n"
+                elif file.name.endswith(".txt"):
+                    text = file.read().decode("utf-8")
 
-    st.session_state.messages.append({"role": "user", "content": prompt})
+                # Sliding Window Chunking
+                chunk_size, overlap = 300, 100
+                step = chunk_size - overlap
+                chunks = [
+                    text[i : i + chunk_size]
+                    for i in range(0, len(text), step)
+                    if text[i : i + chunk_size].strip()
+                ]
 
-    api_messages = [msg for msg in st.session_state.messages[:-1]]
-    api_messages.append({"role": "user", "content": user_content})
+                # Index Chunks into ChromaDB
+                chroma_client = chromadb.Client()
+                try:
+                    chroma_client.delete_collection("chat_docs")
+                except Exception:
+                    pass
 
-    with st.chat_message("assistant"):
-        response_placeholder = st.empty()
-        full_response = ""
+                collection = chroma_client.create_collection("chat_docs")
+                tags = [f"{file.name}_{i}" for i in range(len(chunks))]
+                collection.add(documents=chunks, ids=tags)
 
-        try:
-            stream = client.chat.completions.create(
-                model=MODEL,
-                messages=api_messages,
-                stream=True,
-            )
+                st.session_state.collection = collection
+                st.session_state.pdf_filename = file.name
+                status.update(label=f"Indexed {file.name} successfully!", state="complete")
 
-            for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    full_response += chunk.choices[0].delta.content
-                    response_placeholder.markdown(full_response + "▌")
+    # Proceed with LLM completion if prompt text is submitted
+    if user_text:
+        with st.chat_message("user"):
+            st.markdown(user_text)
 
-            response_placeholder.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
+        user_content = user_text
+        if "collection" in st.session_state:
+            results = st.session_state.collection.query(query_texts=[user_text], n_results=5)
+            retrieved_docs = results["documents"][0] if results.get("documents") else []
+            if retrieved_docs:
+                context_str = "\n---\n".join(retrieved_docs)
+                user_content = (
+                    f"Use the following document context to answer the question.\n\n"
+                    f"DOCUMENT CONTEXT:\n{context_str}\n\n"
+                    f"USER QUESTION: {user_text}"
+                )
 
-        except Exception as e:
-            st.error(f"OpenRouter Error: {e}")
+        st.session_state.messages.append({"role": "user", "content": user_text})
+
+        api_messages = [msg for msg in st.session_state.messages[:-1]]
+        api_messages.append({"role": "user", "content": user_content})
+
+        with st.chat_message("assistant"):
+            response_placeholder = st.empty()
+            full_response = ""
+
+            try:
+                stream = client.chat.completions.create(
+                    model=MODEL,
+                    messages=api_messages,
+                    stream=True,
+                )
+
+                for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        full_response += chunk.choices[0].delta.content
+                        response_placeholder.markdown(full_response + "▌")
+
+                response_placeholder.markdown(full_response)
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+            except Exception as e:
+                st.error(f"OpenRouter Error: {e}")
