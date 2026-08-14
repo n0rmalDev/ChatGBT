@@ -1,2 +1,5 @@
 streamlit
 openai
+chromadb
+pypdf
+python-dotenv
