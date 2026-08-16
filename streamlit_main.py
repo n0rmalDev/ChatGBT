@@ -25,7 +25,7 @@ components.html(
 )
 
 # ------------------------------------------------------------------------------
-# 2. Custom CSS: Pitch Black Theme, Purple Accents & Hidden Top Toolbar
+# 2. Custom CSS: Hidden Top Header
 # ------------------------------------------------------------------------------
 st.markdown(
     """
@@ -40,7 +40,13 @@ st.markdown(
 )
 
 # ------------------------------------------------------------------------------
-# 3. Sidebar Knowledge Base Status
+# 3. Avatar Constants Configuration
+# ------------------------------------------------------------------------------
+USER_AVATAR = "👤"
+ASSISTANT_AVATAR = "😈"
+
+# ------------------------------------------------------------------------------
+# 4. Sidebar Knowledge Base Status
 # ------------------------------------------------------------------------------
 with st.sidebar:
     st.header("📄 Knowledge Base")
@@ -56,7 +62,7 @@ with st.sidebar:
         st.info("No active document loaded.")
 
 # ------------------------------------------------------------------------------
-# 4. Main Chat App & API Setup
+# 5. Main Chat App & API Setup
 # ------------------------------------------------------------------------------
 MODEL = "openrouter/free"
 
@@ -86,14 +92,15 @@ if "messages" not in st.session_state:
         }
     ]
 
-# Render chat history
+# Render chat history with custom emoji avatars
 for message in st.session_state.messages:
     if message["role"] != "system":
-        with st.chat_message(message["role"]):
+        avatar = USER_AVATAR if message["role"] == "user" else ASSISTANT_AVATAR
+        with st.chat_message(message["role"], avatar=avatar):
             st.markdown(message["content"])
 
 # ------------------------------------------------------------------------------
-# 5. Handle Chat Input & Automatic File Attachment Processing
+# 6. Handle Chat Input & Automatic File Attachment Processing
 # ------------------------------------------------------------------------------
 if prompt_data := st.chat_input("Ask a question or attach a file...", accept_file=True, file_type=["pdf", "txt"]):
     
@@ -145,7 +152,7 @@ if prompt_data := st.chat_input("Ask a question or attach a file...", accept_fil
 
     # Proceed with LLM completion if prompt text is submitted
     if user_text:
-        with st.chat_message("user"):
+        with st.chat_message("user", avatar=USER_AVATAR):
             st.markdown(user_text)
 
         user_content = user_text
@@ -165,7 +172,7 @@ if prompt_data := st.chat_input("Ask a question or attach a file...", accept_fil
         api_messages = [msg for msg in st.session_state.messages[:-1]]
         api_messages.append({"role": "user", "content": user_content})
 
-        with st.chat_message("assistant"):
+        with st.chat_message("assistant", avatar=ASSISTANT_AVATAR):
             response_placeholder = st.empty()
             full_response = ""
 
